@@ -1,0 +1,25 @@
+loadstring(game:HttpGet(('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'),true))() 
+local mt = getrawmetatable(game)
+make_writeable(mt)
+
+local namecall = mt.__namecall
+
+mt.__namecall = newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    local args = {...}
+
+    if method == "FireServer" and tostring(self) == "KickEvent" then
+       return
+    end
+    return namecall(self, table.unpack(args))
+end)
+local __index
+__index = hookmetamethod(game, "__index", newcclosure(function(self, ...)
+local args = {...}
+local selfName = tostring(self)
+
+if not checkcaller() and selfName == "ChangeMagAndAmmo" and args[1] == "Value" then
+return math.huge
+end
+return __index(self, unpack(args))
+end))
