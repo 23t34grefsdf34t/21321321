@@ -1,0 +1,9 @@
+local uis = game:GetService("UserInputService")
+
+uis.InputBegan:Connect(function(asd)
+if asd.KeyCode == Enum.KeyCode.E then -- any key here (could be insert or delete whatever u want)
+local mousePosition = uis:GetMouseLocation()
+
+setclipboard(tostring(mousePosition))
+end
+end)
