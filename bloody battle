@@ -1,0 +1,13 @@
+local item1 = "Flamethrower"
+local item2 = "Jeremy's Cannon"
+local item3 = "Jersey"
+local item4 = "Helicopter Blade"
+local item5 = "Saxaboom"
+local item6 = "Scalpel"
+local item7 = "Zombify"
+
+
+repeat
+game:GetService("ReplicatedStorage").MainEvents:FireServer("respawn")
+task.wait(1)
+until game.Players.LocalPlayer.Backpack:FindFirstChild(item1) or game.Players.LocalPlayer.Backpack:FindFirstChild(item2) or game.Players.LocalPlayer.Backpack:FindFirstChild(item3) or game.Players.LocalPlayer.Backpack:FindFirstChild(item4) or game.Players.LocalPlayer.Backpack:FindFirstChild(item5) or game.Players.LocalPlayer.Backpack:FindFirstChild(item6) or game.Players.LocalPlayer.Backpack:FindFirstChild(item7)
