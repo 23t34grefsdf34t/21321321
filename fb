@@ -1,0 +1,17 @@
+local part = Instance.new("Part",workspace)
+part.Name = "amazing"
+part.Anchored = true
+part.Size = Vector3.new(100, 10 , 100)
+part.Position = Vector3.new(-876, 319, -592)
+
+wait(1)
+
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-876, 322, -592)
+
+game:GetService("RunService"):Set3dRenderingEnabled(false)
+
+for _, v in next, getconnections(game:GetService("Players").LocalPlayer.Idled) do
+        v:Disable()
+end
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/JumbleBumble/Scripts/main/FruitBattlegrounds.lua"))()
