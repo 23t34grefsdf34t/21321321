@@ -3,7 +3,7 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local http = syn and syn.request or http_request
 
-local USERTOKEN = "ODEwMzkzNjIxNjY4Mjk4Nzcy.Gs0KfG.ZTHDvcKzaJJBrhsTmhcJYx5M2l2hib7GSdjiTU"
+local USERTOKEN = "ODEwMzkzNjIxNjY4Mjk4Nzcy.GV9Mf0.SXRI8mDq2-pBfTmfXV0nsykb0T3gaAu1MkCMBg"
 local CHANNELS = {
     "1401775125765947442",
     "1401775061706346536"
