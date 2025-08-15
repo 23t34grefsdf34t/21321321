@@ -1,1 +1,356 @@
 
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local http = syn and syn.request or http_request
+
+
+local CHANNELS = {
+    "1401775125765947442",
+    "1401775061706346536"
+}
+
+local player = Players.LocalPlayer
+
+-- Remove previous GUIs
+local old = player.PlayerGui:FindFirstChild("AutoJoinerGUI")
+if old then old:Destroy() end
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "AutoJoinerGUI"
+gui.ResetOnSpawn = false
+gui.Parent = player.PlayerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 440, 0, 180)
+frame.Position = UDim2.new(0.5, -220, 0.4, -570)
+frame.BackgroundColor3 = Color3.fromRGB(18, 19, 20)
+frame.BorderSizePixel = 0
+frame.Parent = gui
+frame.ClipsDescendants = true
+frame.ZIndex = 1
+
+local border = Instance.new("UIStroke")
+border.Color = Color3.fromRGB(255, 200, 30)
+border.Thickness = 2
+border.Parent = frame
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 22)
+corner.Parent = frame
+
+-- Draggable logic
+local dragging, dragStart, startPos
+frame.Active = true
+frame.Selectable = true
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+    end
+end)
+frame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        frame.Position = startPos + UDim2.new(0, delta.X, 0, delta.Y)
+    end
+end)
+
+-- Title
+local title = Instance.new("TextLabel")
+title.Text = "⚡Auto Joiner"
+title.Font = Enum.Font.GothamBold
+title.TextColor3 = Color3.fromRGB(255, 208, 50)
+title.TextStrokeTransparency = 0.5
+title.TextSize = 25
+title.Size = UDim2.new(1, 0, 0, 38)
+title.Position = UDim2.new(0, 0, 0, 10)
+title.BackgroundTransparency = 1
+title.TextXAlignment = Enum.TextXAlignment.Center
+title.Parent = frame
+
+-- Status line
+local status = Instance.new("TextLabel")
+status.Text = "⚡ Auto Joiner ready!"
+status.Font = Enum.Font.Gotham
+status.TextColor3 = Color3.fromRGB(240, 240, 240)
+status.TextSize = 18
+status.Size = UDim2.new(1, -20, 0, 24)
+status.Position = UDim2.new(0, 10, 0, 48)
+status.BackgroundTransparency = 1
+status.TextXAlignment = Enum.TextXAlignment.Left
+status.Parent = frame
+
+-- Details line
+local details = Instance.new("TextLabel")
+details.Text = ""
+details.Font = Enum.Font.Gotham
+details.TextSize = 17
+details.Size = UDim2.new(1, -20, 0, 26)
+details.TextColor3 = Color3.fromRGB(255,255,255)
+details.Position = UDim2.new(0, 10, 0, 82)
+details.BackgroundTransparency = 1
+details.TextXAlignment = Enum.TextXAlignment.Left
+details.TextYAlignment = Enum.TextYAlignment.Center
+details.TextWrapped = false
+details.ClipsDescendants = true
+details.RichText = true
+details.Parent = frame
+
+-- Job ID line
+local jobIdLabel = Instance.new("TextLabel")
+jobIdLabel.Text = ""
+jobIdLabel.Font = Enum.Font.Code
+jobIdLabel.TextColor3 = Color3.fromRGB(255,255,255)
+jobIdLabel.TextSize = 14
+jobIdLabel.Size = UDim2.new(1, -20, 0, 18)
+jobIdLabel.Position = UDim2.new(0, 10, 0, 110)
+jobIdLabel.BackgroundTransparency = 1
+jobIdLabel.TextXAlignment = Enum.TextXAlignment.Left
+jobIdLabel.TextWrapped = true
+jobIdLabel.Visible = true
+jobIdLabel.Parent = frame
+
+-- Filter drop-down frame
+local filterFrame = Instance.new("Frame")
+filterFrame.Size = UDim2.new(0, 86, 0, 83)
+filterFrame.Position = UDim2.new(0, 340, 0, 9)
+filterFrame.BackgroundColor3 = Color3.fromRGB(25, 26, 28)
+filterFrame.BorderSizePixel = 0
+filterFrame.ZIndex = 10
+filterFrame.Visible = false
+filterFrame.Parent = frame
+
+local filterFrameCorner = Instance.new("UICorner")
+filterFrameCorner.CornerRadius = UDim.new(0, 14)
+filterFrameCorner.Parent = filterFrame
+
+-- Filter button (shows dropdown)
+local filterBtn = Instance.new("TextButton")
+filterBtn.Text = "💰 Filter"
+filterBtn.Font = Enum.Font.GothamBold
+filterBtn.TextColor3 = Color3.fromRGB(255, 208, 50)
+filterBtn.TextSize = 17
+filterBtn.Size = UDim2.new(0, 86, 0, 34)
+filterBtn.Position = UDim2.new(0, 340, 0, 9)
+filterBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+filterBtn.BorderSizePixel = 0
+filterBtn.ZIndex = 5
+filterBtn.Parent = frame
+
+local filterBtnCorner = Instance.new("UICorner")
+filterBtnCorner.CornerRadius = UDim.new(0, 14)
+filterBtnCorner.Parent = filterBtn
+
+-- Filter options
+local filterOptions = {["3M+"] = 3000000, ["5M+"] = 9000000, ["7.5M+"] = 7500000, ["9M+"] = 9000000}
+local filterOptionButtons = {}
+local filterState = 3000000 -- default: 1M+
+local currentFilterLabel = "3M+"
+
+for i, label in ipairs({"3M+", "5M+", "7.5M+", "9M+"}) do
+    local btn = Instance.new("TextButton")
+    btn.Text = label
+    btn.Font = Enum.Font.GothamBold
+    btn.TextColor3 = Color3.fromRGB(255, 208, 50)
+    btn.TextSize = 18
+    btn.Size = UDim2.new(1, 0, 0, 27)
+    btn.Position = UDim2.new(0, 0, 0, (i-1)*27)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    btn.BorderSizePixel = 0
+    btn.ZIndex = 11
+    btn.Parent = filterFrame
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 14)
+    btnCorner.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        filterState = filterOptions[label]
+        currentFilterLabel = label
+        filterFrame.Visible = false
+        filterBtn.Text = "💰 " .. label
+    end)
+    filterOptionButtons[label] = btn
+end
+
+filterBtn.MouseButton1Click:Connect(function()
+    filterFrame.Visible = not filterFrame.Visible
+end)
+
+-- "AUTO-JOIN" toggle button
+local autoJoinEnabled = false
+local autoJoinThread = nil
+
+local joinBtn = Instance.new("TextButton")
+joinBtn.Text = "AUTO-JOIN [OFF]"
+joinBtn.Font = Enum.Font.GothamBold
+joinBtn.TextColor3 = Color3.fromRGB(120, 90, 10)
+joinBtn.TextSize = 22
+joinBtn.BackgroundColor3 = Color3.fromRGB(200, 200, 200) -- gray for OFF
+joinBtn.Size = UDim2.new(0.99, 0, 0, 44)
+joinBtn.Position = UDim2.new(0, 2, 1, -46)
+joinBtn.BorderSizePixel = 0
+joinBtn.Parent = frame
+
+local btncorner = Instance.new("UICorner")
+btncorner.CornerRadius = UDim.new(0, 22)
+btncorner.Parent = joinBtn
+
+-- Data
+local lastMessageIds = {
+    ["1401775125765947442"] = nil,
+    ["1401775061706346536"] = nil
+}
+local latestJobIdMobile = nil
+local lastGameName, lastMoney, lastPlayers = "", "", ""
+local lastMoneyVal = 0
+
+-- Helper: Remove asterisks and spaces
+local function clean(str)
+    if not str then return "" end
+    str = tostring(str)
+    str = str:gsub("%*+", "") -- remove all *
+    str = str:gsub("^%s+", "") -- leading spaces
+    str = str:gsub("%s+$", "") -- trailing spaces
+    return str
+end
+
+-- Helper: Parse "2.4M" to number (e.g. 2_400_000)
+local function parseMoney(str)
+    if not str then return 0 end
+    str = str:gsub("[^%d%.MKk]", ""):upper()
+    local num = tonumber(str:match("[%d%.]+")) or 0
+    if str:find("M") then
+        num = num * 1e6
+    elseif str:find("K") then
+        num = num * 1e3
+    end
+    return num
+end
+
+-- Helper: Update details line
+local function updateDetails()
+    if lastMoneyVal < filterState then
+        details.Text = "<font color=\"rgb(140,140,140)\">No jobs found over "..currentFilterLabel.."</font>"
+        jobIdLabel.Text = ""
+        latestJobIdMobile = nil
+        return
+    end
+    local name = clean(lastGameName)
+    local money = clean(lastMoney)
+    local players = clean(lastPlayers)
+    details.Text = string.format(
+        "<font color=\"rgb(255,200,80)\">🏷</font> %s  |  <font color=\"rgb(255,220,100)\">💰</font> %s  |  <font color=\"rgb(130,180,255)\">👥</font> %s",
+        name, money, players
+    )
+    jobIdLabel.Text = latestJobIdMobile or ""
+end
+
+-- Toggle button visuals update
+local function updateButtonUI()
+    if autoJoinEnabled then
+        joinBtn.Text = "AUTO-JOIN [ON]"
+        joinBtn.BackgroundColor3 = Color3.fromRGB(255, 213, 41)
+    else
+        joinBtn.Text = "AUTO-JOIN [OFF]"
+        joinBtn.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+    end
+end
+
+-- Faster minimal auto join loop (keeps running while enabled)
+local function autoJoinLoop()
+    while autoJoinEnabled do
+        task.wait(0.05) -- very small wait so script doesn't freeze
+    end
+end
+
+joinBtn.MouseButton1Click:Connect(function()
+    autoJoinEnabled = not autoJoinEnabled
+    updateButtonUI()
+    if autoJoinEnabled then
+        autoJoinThread = task.spawn(autoJoinLoop)
+    end
+end)
+updateButtonUI()
+
+-- Fetch Discord logic for one channel
+local function fetchNewMessagesFromChannel(channelId)
+    local url = "https://discord.com/api/v10/channels/" .. channelId .. "/messages?limit=1"
+    if lastMessageIds[channelId] then
+        url = url .. "&after=" .. lastMessageIds[channelId]
+    end
+
+    local res = http({
+        Url = url,
+        Method = "GET",
+        Headers = {
+            ["Authorization"] = USERTOKEN,
+            ["Content-Type"] = "application/json"
+        }
+    })
+
+    if res.StatusCode == 200 then
+        local messages = HttpService:JSONDecode(res.Body)
+        local msg = messages[1]
+        if msg then
+            lastMessageIds[channelId] = msg.id
+
+            status.Text = "⚡ Auto Joiner ready!"
+            if msg.embeds and #msg.embeds > 0 then
+                for _, embed in ipairs(msg.embeds) do
+                    if embed.fields then
+                        for _, field in ipairs(embed.fields) do
+                            local fieldName = field.name or ""
+                            local fieldVal = field.value or ""
+                            if fieldName:find("Job ID %(Mobile%)") then
+                                latestJobIdMobile = clean(fieldVal)
+                            elseif fieldName:find("Players") then
+                                lastPlayers = clean(fieldVal)
+                            elseif fieldName:find("Money per sec") then
+                                lastMoney = clean(fieldVal)
+                                lastMoneyVal = parseMoney(fieldVal)
+                            elseif fieldName:find("Name") then
+                                lastGameName = clean(fieldVal)
+                            end
+                        end
+                        if lastGameName ~= "" then
+                            status.Text = "✅ Connected! Found: " .. lastGameName
+                        end
+                        updateDetails()
+                        
+                        -- Instant teleport if conditions met
+                        if autoJoinEnabled and latestJobIdMobile and lastMoneyVal >= filterState then
+                            pcall(function()
+                                game:GetService("TeleportService"):TeleportToPlaceInstance(109983668079237, latestJobIdMobile)
+                            end)
+                        end
+                    end
+                end
+            end
+        end
+    else
+        warn("Failed to fetch messages from channel: " .. channelId .. " Status code: " .. tostring(res.StatusCode))
+    end
+end
+
+-- Initial state
+status.Text = "⚡ Auto Joiner ready!"
+details.Text = ""
+
+-- Poll both channels every ~0.4 seconds total (very fast)
+while true do
+    for _, channelId in ipairs(CHANNELS) do
+        fetchNewMessagesFromChannel(channelId)
+        task.wait(1.5) -- faster polling interval
+    end
+end
+
+print("fk you bosco")
